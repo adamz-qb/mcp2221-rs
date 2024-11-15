@@ -445,11 +445,55 @@ impl i2c::Write for Handle {
     }
 }
 
+impl i2c::WriteIter for Handle {
+    type Error = Error;
+
+    fn write<B>(&mut self, address: u8, bytes: B) -> std::result::Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8> {
+        todo!()
+    }
+}
+
+impl i2c::WriteIterRead for Handle {
+    type Error = Error;
+
+    fn write_iter_read<B>(
+        &mut self,
+        address: u8,
+        bytes: B,
+        buffer: &mut [u8],
+    ) -> std::result::Result<(), Self::Error>
+    where
+        B: IntoIterator<Item = u8> {
+        todo!()
+    }
+}
+
 impl i2c::Read for Handle {
     type Error = Error;
 
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
         self.write_read_address(address, &[], buffer)
+    }
+}
+
+impl i2c::Transactional for Handle {
+    type Error = Error;
+
+    fn exec<'a>(&mut self, address: u8, operations: &mut [i2c::Operation<'a>])
+        -> std::result::Result<(), Self::Error> {
+        todo!()
+    }
+}
+
+impl i2c::TransactionalIter for Handle {
+    type Error = Error;
+
+    fn exec_iter<'a, O>(&mut self, address: u8, operations: O) -> std::result::Result<(), Self::Error>
+    where
+        O: IntoIterator<Item = i2c::Operation<'a>> {
+        todo!()
     }
 }
 
