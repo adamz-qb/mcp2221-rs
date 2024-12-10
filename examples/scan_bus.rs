@@ -2,7 +2,7 @@
 // This project is dual-licensed under Apache 2.0 and MIT terms.
 // See LICENSE-APACHE and LICENSE-MIT for details.
 
-use embedded_hal::blocking::i2c::Read;
+use embedded_hal::i2c::I2c;
 use std::time::Duration;
 
 fn main() {
@@ -14,6 +14,7 @@ fn main() {
 fn run() -> mcp2221::Result<()> {
     let mut config = mcp2221::Config::default();
     config.i2c_speed_hz = 400_000;
+    config.reset_on_open = false;
     // For talking to a peripheral we might want a higher timeout, but for
     // scanning the bus, a short timeout is good since it allows us to scan all
     // addresses more quickly.

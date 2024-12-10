@@ -5,7 +5,8 @@
 //! Interface to MCP2221 and MCP2221A. Uses libusb, so no MCP2221 kernel module
 //! is required. Supports I2C and GPIO.
 
-use embedded_hal::blocking::i2c;
+use embedded_hal::i2c;
+use embedded_hal::i2c::Operation;
 use std::fmt::Display;
 use std::time::Duration;
 use std::time::Instant;
@@ -66,6 +67,12 @@ pub enum Error {
     Nack,
 }
 
+impl i2c::Error for Error {
+    fn kind(&self) -> i2c::ErrorKind {
+        i2c::ErrorKind::Other
+    }
+}
+
 /// An MCP device that has been opened. Supports I2C and GPIO operations.
 pub struct Handle {
     handle: rusb::DeviceHandle<rusb::GlobalContext>,
@@ -75,7 +82,7 @@ pub struct Handle {
 
 /// A supported device that hasn't yet been opened.
 pub struct AvailableDevice {
-    device: rusb::Device<rusb::GlobalContext>,
+    pub device: rusb::Device<rusb::GlobalContext>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -424,78 +431,35 @@ impl Handle {
     }
 }
 
-impl i2c::WriteRead for Handle {
+impl i2c::ErrorType for Handle {
     type Error = Error;
+}
 
-    fn write_read(
+impl i2c::I2c for Handle {
+    fn transaction(
         &mut self,
         address: u8,
-        bytes: &[u8],
-        buffer: &mut [u8],
-    ) -> Result<(), Self::Error> {
-        self.write_read_address(address, bytes, buffer)
+        operations: &mut [Operation<'_>],
+    ) -> std::result::Result<(), Self::Error> {
+
+        use i2c::Operation;
+
+        match operations {
+            [Operation::Read(read_buf)] => {
+                self.write_read_address(address, &[], read_buf)
+            },
+            [Operation::Write(write_buf)] => {
+                self.write_read_address(address, write_buf, &mut [])
+            },
+            [Operation::Write(write_buf), Operation::Read(read_buf)] => {
+                self.write_read_address(address, write_buf, read_buf)
+            },
+            _ => Err(Error::CommandFailed)
+        }
     }
 }
 
-impl i2c::Write for Handle {
-    type Error = Error;
 
-    fn write(&mut self, address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
-        self.write_read_address(address, bytes, &mut [])
-    }
-}
-
-impl i2c::WriteIter for Handle {
-    type Error = Error;
-
-    fn write<B>(&mut self, address: u8, bytes: B) -> std::result::Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8> {
-        todo!()
-    }
-}
-
-impl i2c::WriteIterRead for Handle {
-    type Error = Error;
-
-    fn write_iter_read<B>(
-        &mut self,
-        address: u8,
-        bytes: B,
-        buffer: &mut [u8],
-    ) -> std::result::Result<(), Self::Error>
-    where
-        B: IntoIterator<Item = u8> {
-        todo!()
-    }
-}
-
-impl i2c::Read for Handle {
-    type Error = Error;
-
-    fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
-        self.write_read_address(address, &[], buffer)
-    }
-}
-
-impl i2c::Transactional for Handle {
-    type Error = Error;
-
-    fn exec<'a>(&mut self, address: u8, operations: &mut [i2c::Operation<'a>])
-        -> std::result::Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-impl i2c::TransactionalIter for Handle {
-    type Error = Error;
-
-    fn exec_iter<'a, O>(&mut self, address: u8, operations: O) -> std::result::Result<(), Self::Error>
-    where
-        O: IntoIterator<Item = i2c::Operation<'a>> {
-        todo!()
-    }
-}
 
 pub struct DeviceInfo {
     hardware_major: u8,
